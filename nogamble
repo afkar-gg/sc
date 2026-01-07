@@ -1,0 +1,33 @@
+local TextChatService = game:GetService("TextChatService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local blacklist = {
+    "bloxdrop",
+    "bloxsdrop"
+}
+
+TextChatService.OnIncomingMessage = function(message)
+    -- Skip system messages
+    if not message.TextSource then
+        return nil
+    end
+    
+    -- Don't filter your own messages
+    if message.TextSource.UserId == LocalPlayer.UserId then
+        return nil
+    end
+    
+    local text = string.lower(message.Text)
+    for _, word in ipairs(blacklist) do
+        if string.find(text, word) then
+            -- Hide the message by setting empty text
+            local properties = TextChatService.ChatWindowConfiguration:DeriveNewMessageProperties()
+            properties.Text = ""
+            return properties
+        end
+    end
+    
+    -- No match, no change
+    return nil
+end
