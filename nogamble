@@ -4,7 +4,10 @@ local LocalPlayer = Players.LocalPlayer
 
 local blacklist = {
     "bloxdrop",
-    "bloxsdrop"
+    "bloxsdrop",
+    "bloxdrope",
+    "bloxdrep",
+    "bloxref"
 }
 
 TextChatService.OnIncomingMessage = function(message)
@@ -13,8 +16,10 @@ TextChatService.OnIncomingMessage = function(message)
         return nil
     end
     
-    -- Don't filter your own messages
-    if message.TextSource.UserId == LocalPlayer.UserId then
+    local userId = message.TextSource.UserId
+    
+    -- Don't filter your own messages or friends
+    if userId == LocalPlayer.UserId or LocalPlayer:IsFriendsWith(userId) then
         return nil
     end
     
