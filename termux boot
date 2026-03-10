@@ -1,0 +1,17 @@
+cat > ~/.termux/boot/termin.sh <<'SH'
+#!/data/data/com.termux/files/usr/bin/sh
+termux-wake-lock
+sleep 6
+CMD_LOGIN="pd"
+command -v pd >/dev/null 2>&1 || CMD_LOGIN="proot-distro"
+$CMD_LOGIN login d -- sh -c 'cd t && exec node t' >/data/data/com.termux/files/home/.termux/start-bot.log 2>&1 &
+SH
+chmod +x ~/.termux/boot/termin.sh
+cat > ~/.termux/boot/novalaunch.sh << "EOF"
+#!/data/data/com.termux/files/usr/bin/sh
+# Wait a bit for the system to be fully ready
+sleep 10
+# Force Nova Launcher as default home
+su -c 'pm set-home-activity com.teslacoilsw.launcher/.NovaLauncher'
+EOF
+chmod +x ~/.termux/boot/novalaunch.sh
