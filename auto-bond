@@ -1,3 +1,2 @@
 -- hello potential skidder >:3
-loadstring(game:HttpGet("https://afkar.lol/script/f
-dr-abond"))()
+loadstring(game:HttpGet("https://afkar.lol/script/dr-abond"))()
