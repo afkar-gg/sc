@@ -18,7 +18,12 @@ while true; do
         echo "Detected cache rename failure. Parsing paths from log..."
 
         DEST_PATH=$(sed -n "s/.*rename '.*' -> '\([^']*\)'.*/\1/p" "$LOG_FILE" | head -n 1)
+        
         PKG_RAW=$(sed -n "s/.*trying to fetch https:\/\/registry.npmjs.org\/\([^:]*\):.*/\1/p" "$LOG_FILE" | head -n 1)
+        if [ -z "$PKG_RAW" ]; then
+            PKG_RAW=$(sed -n "s/.*tarball data for \(.*\)@https:\/\/.*/\1/p" "$LOG_FILE" | head -n 1)
+        fi
+        
         PKG_NAME=$(echo "$PKG_RAW" | sed 's/%2[fF]/\//g')
 
         if [ ! -z "$DEST_PATH" ] && [ ! -z "$PKG_NAME" ]; then
