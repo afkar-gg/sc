@@ -14,11 +14,44 @@ while true; do
         break
     fi
 
-    if grep -q "ENOENT: no such file or directory, rename" "$LOG_FILE"; then
-        echo "Detected cache rename failure. Parsing paths from log..."
+    # Detect ENOENT or ENOTEMPTY rename errors
+    if grep -qE "(ENOENT|ENOTEMPTY): directory not empty, rename|syscall rename" "$LOG_FILE"; then
+        echo "Detected rename failure (ENOENT/ENOTEMPTY). Parsing paths from log..."
 
-        DEST_PATH=$(sed -n "s/.*rename '.*' -> '\([^']*\)'.*/\1/p" "$LOG_FILE" | head -n 1)
-        
+        # Extract source and destination paths from the log
+        SRC_PATH=$(sed -n "s/.*rename '\([^']*\)' -> '\([^']*\)'.*/\1/p" "$LOG_FILE" | head -n 1)
+        DEST_PATH=$(sed -n "s/.*rename '\([^']*\)' -> '\([^']*\)'.*/\2/p" "$LOG_FILE" | head -n 1)
+
+        # Fallback path extraction via 'path' and 'dest' npm error lines
+        if [ -z "$DEST_PATH" ]; then
+            DEST_PATH=$(grep "npm ERR! dest " "$LOG_FILE" | awk '{print $4}' | head -n 1)
+        fi
+        if [ -z "$SRC_PATH" ]; then
+            SRC_PATH=$(grep "npm ERR! path " "$LOG_FILE" | awk '{print $4}' | head -n 1)
+        fi
+
+        # Check if the error is specifically an ENOTEMPTY on node_modules renames
+        if grep -q "ENOTEMPTY" "$LOG_FILE"; then
+            echo "Handling ENOTEMPTY error..."
+            
+            # Remove colliding destination directory if present
+            if [ -n "$DEST_PATH" ] && [ -e "$DEST_PATH" ]; then
+                echo "Removing conflicting destination folder: $DEST_PATH"
+                rm -rf "$DEST_PATH"
+            fi
+
+            # Remove colliding source directory if present
+            if [ -n "$SRC_PATH" ] && [ -e "$SRC_PATH" ]; then
+                echo "Removing conflicting source folder: $SRC_PATH"
+                rm -rf "$SRC_PATH"
+            fi
+
+            echo "Cleaned up conflicting directory/file. Retrying install..."
+            echo "--------------------------------------------------------"
+            continue
+        fi
+
+        # ENOENT Cache handling logic (Tarball direct download fallback)
         PKG_RAW=$(sed -n "s/.*trying to fetch https:\/\/registry.npmjs.org\/\([^:]*\):.*/\1/p" "$LOG_FILE" | head -n 1)
         if [ -z "$PKG_RAW" ]; then
             PKG_RAW=$(sed -n "s/.*tarball data for \(.*\)@https:\/\/.*/\1/p" "$LOG_FILE" | head -n 1)
