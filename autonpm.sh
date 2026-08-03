@@ -8,7 +8,7 @@ echo "Starting Log-Parsing npm Cache Fixer..."
 while true; do
     echo "Running npm install..."
     
-    npm install --force --prefer-online --no-audit 2>&1 | tee "$LOG_FILE"
+    npm install --prefer-online --no-audit 2>&1 | tee "$LOG_FILE"
     
     if [ ${PIPESTATUS[0]} -eq 0 ]; then
         echo "Success! npm install completed successfully."
