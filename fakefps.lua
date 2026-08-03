@@ -77,4 +77,4 @@ meow.OnClientEvent:Connect(function(p)
     end
 end)
 
-print("[fakestats] Active — faking FPS=" .. FAKE_FPS .. " MEM=" .. FAKE_MEM .. "MB")
+print("[fakestats] Active! faking FPS=" .. FAKE_FPS .. " MEM=" .. FAKE_MEM .. "MB")
