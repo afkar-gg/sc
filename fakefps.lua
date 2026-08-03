@@ -36,7 +36,7 @@ if getconnections then
 end
 
 if disconnected == 0 then
-    warn("[fakestats] Could not find/disconnect the real meow handler — fake values will still be sent but real ones may also fire")
+    warn("[fakestats] Could not find/disconnect the real meow handler, fake values will still be sent but real ones may also fire")
 end
 
 meow.OnClientEvent:Connect(function(p)
