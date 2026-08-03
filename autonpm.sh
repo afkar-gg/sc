@@ -1,14 +1,12 @@
 #!/bin/bash
 LOG_FILE="npm_install_error.log"
 
-# basically this is just an npm install with automation of fixing rename errors and caching issue
-
 echo "Starting Log-Parsing npm Cache Fixer..."
 
 while true; do
     echo "Running npm install..."
     
-    npm install --prefer-online --no-audit 2>&1 | tee "$LOG_FILE"
+    npm install --force --prefer-online --no-audit 2>&1 | tee "$LOG_FILE"
     
     if [ ${PIPESTATUS[0]} -eq 0 ]; then
         echo "Success! npm install completed successfully."
@@ -16,20 +14,20 @@ while true; do
         break
     fi
 
-    # 1. Detect EINTEGRITY errors
-    if grep -qE "code EINTEGRITY|integrity checksum failed" "$LOG_FILE"; then
-        echo "Detected EINTEGRITY checksum corruption failure."
-        echo "Clearing npm cache and corrupted temporary files..."
+    # 1. Detect missing cache file or corruption inside _cacache (ENOENT / EINTEGRITY)
+    if grep -qE "_cacache|code EINTEGRITY|integrity checksum failed" "$LOG_FILE"; then
+        echo "Detected npm cache corruption or missing cache file in _cacache."
+        echo "Purging cache directory to rebuild fresh..."
         
-        # Purge npm cache directory
+        # Remove corrupted cache paths
+        rm -rf ~/.npm/_cacache /tmp/npm-cache/* 2>/dev/null
         npm cache clean --force 2>/dev/null
-        rm -rf /tmp/npm-cache/* ~/.npm/_cacache 2>/dev/null
-        
-        # Extract corrupted package name if present (e.g., strip-json-comments)
-        CORRUPTED_PKG=$(grep -oP "trying to fetch https://registry.npmjs.org/\K[^:]+" "$LOG_FILE" | head -n 1)
-        if [ -n "$CORRUPTED_PKG" ]; then
-            echo "Removing local cache/modules for corrupted package: $CORRUPTED_PKG"
-            rm -rf "node_modules/$CORRUPTED_PKG" 2>/dev/null
+
+        # Attempt to target specific failing package directory in node_modules
+        FAILED_PKG=$(grep -oP "trying to fetch https://registry.npmjs.org/\K[^:]+" "$LOG_FILE" | head -n 1)
+        if [ -n "$FAILED_PKG" ]; then
+            echo "Removing temporary node_modules entry for: $FAILED_PKG"
+            rm -rf "node_modules/$FAILED_PKG" 2>/dev/null
         fi
 
         echo "Cache cleared! Retrying install..."
@@ -57,13 +55,11 @@ while true; do
         if grep -q "ENOTEMPTY" "$LOG_FILE"; then
             echo "Handling ENOTEMPTY error..."
             
-            # Remove colliding destination directory if present
             if [ -n "$DEST_PATH" ] && [ -e "$DEST_PATH" ]; then
                 echo "Removing conflicting destination folder: $DEST_PATH"
                 rm -rf "$DEST_PATH"
             fi
 
-            # Remove colliding source directory if present
             if [ -n "$SRC_PATH" ] && [ -e "$SRC_PATH" ]; then
                 echo "Removing conflicting source folder: $SRC_PATH"
                 rm -rf "$SRC_PATH"
