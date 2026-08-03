@@ -1,6 +1,8 @@
 #!/bin/bash
 LOG_FILE="npm_install_error.log"
 
+# basically this is just an npm install with automation of fixing rename errors and caching issue
+
 echo "Starting Log-Parsing npm Cache Fixer..."
 
 while true; do
@@ -14,7 +16,28 @@ while true; do
         break
     fi
 
-    # Detect ENOENT or ENOTEMPTY rename errors
+    # 1. Detect EINTEGRITY errors
+    if grep -qE "code EINTEGRITY|integrity checksum failed" "$LOG_FILE"; then
+        echo "Detected EINTEGRITY checksum corruption failure."
+        echo "Clearing npm cache and corrupted temporary files..."
+        
+        # Purge npm cache directory
+        npm cache clean --force 2>/dev/null
+        rm -rf /tmp/npm-cache/* ~/.npm/_cacache 2>/dev/null
+        
+        # Extract corrupted package name if present (e.g., strip-json-comments)
+        CORRUPTED_PKG=$(grep -oP "trying to fetch https://registry.npmjs.org/\K[^:]+" "$LOG_FILE" | head -n 1)
+        if [ -n "$CORRUPTED_PKG" ]; then
+            echo "Removing local cache/modules for corrupted package: $CORRUPTED_PKG"
+            rm -rf "node_modules/$CORRUPTED_PKG" 2>/dev/null
+        fi
+
+        echo "Cache cleared! Retrying install..."
+        echo "--------------------------------------------------------"
+        continue
+    fi
+
+    # 2. Detect ENOENT or ENOTEMPTY rename errors
     if grep -qE "(ENOENT|ENOTEMPTY): directory not empty, rename|syscall rename" "$LOG_FILE"; then
         echo "Detected rename failure (ENOENT/ENOTEMPTY). Parsing paths from log..."
 
